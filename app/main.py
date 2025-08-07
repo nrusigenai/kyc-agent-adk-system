@@ -304,6 +304,8 @@ async def process_full_workflow(client_id: str):
             "results": serialized_results
         })
         
+    except HTTPException:
+        raise  # Re-raise HTTPException with original status code
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in workflow processing: {str(e)}")
 
