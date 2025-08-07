@@ -96,7 +96,10 @@ class KYCVerificationAgent(AgentInterface):
             
             if field_value:
                 result = await self._verify_field(field_name, field_value, kyc_brief)
-                verification_results.append(result.dict())
+                result_dict = result.dict()
+                if "verified_at" in result_dict:
+                    result_dict["verified_at"] = result_dict["verified_at"].isoformat()
+                verification_results.append(result_dict)
         
         return verification_results
     
