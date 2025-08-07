@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 import uuid
 import json
 from datetime import datetime
+from pydantic import BaseModel
 import sys
 import os
 
@@ -277,18 +278,30 @@ async def process_full_workflow(client_id: str):
         if not verification_result.get("success"):
             raise HTTPException(status_code=400, detail=f"Verification failed: {verification_result.get('message', 'Unknown error')}")
         
+        def serialize_datetime_objects(obj):
+            if isinstance(obj, dict):
+                return {k: serialize_datetime_objects(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [serialize_datetime_objects(item) for item in obj]
+            elif isinstance(obj, datetime):
+                return obj.isoformat()
+            else:
+                return obj
+        
+        serialized_results = {
+            "kyc_brief": serialize_datetime_objects(parsing_result["kyc_brief"]),
+            "gap_analysis": serialize_datetime_objects(gap_result["gap_analysis"]),
+            "verification": {
+                "verification_results": serialize_datetime_objects(verification_result["verification_results"]),
+                "sanctions_check": serialize_datetime_objects(verification_result.get("sanctions_check")),
+                "document_authenticity": serialize_datetime_objects(verification_result.get("document_authenticity"))
+            }
+        }
+        
         return JSONResponse(content={
             "status": "success",
             "message": "Complete KYC workflow processed using Google ADK",
-            "results": {
-                "kyc_brief": parsing_result["kyc_brief"],
-                "gap_analysis": gap_result["gap_analysis"],
-                "verification": {
-                    "verification_results": verification_result["verification_results"],
-                    "sanctions_check": verification_result.get("sanctions_check"),
-                    "document_authenticity": verification_result.get("document_authenticity")
-                }
-            }
+            "results": serialized_results
         })
         
     except Exception as e:
