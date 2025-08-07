@@ -158,6 +158,11 @@ async def parse_documents(client_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error parsing documents: {str(e)}")
 
+@app.post("/gap-analysis/{client_id}")
+async def gap_analysis_alias(client_id: str):
+    """Perform gap analysis on KYC brief (alias endpoint)"""
+    return await analyze_gaps(client_id)
+
 @app.post("/analyze-gaps/{client_id}")
 async def analyze_gaps(client_id: str):
     """Perform gap analysis on KYC brief"""
@@ -180,6 +185,11 @@ async def analyze_gaps(client_id: str):
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in gap analysis: {str(e)}")
+
+@app.post("/verify/{client_id}")
+async def verify_alias(client_id: str, fields_to_verify: Optional[List[str]] = None):
+    """Verify KYC information (alias endpoint)"""
+    return await verify_information(client_id, fields_to_verify)
 
 @app.post("/verify-information/{client_id}")
 async def verify_information(
@@ -229,6 +239,11 @@ async def list_clients():
         "clients": list(kyc_briefs.keys()),
         "count": len(kyc_briefs)
     })
+
+@app.post("/workflow/{client_id}")
+async def workflow_alias(client_id: str):
+    """Process complete KYC workflow for a client (alias endpoint)"""
+    return await process_full_workflow(client_id)
 
 @app.post("/process-workflow/{client_id}")
 async def process_full_workflow(client_id: str):
