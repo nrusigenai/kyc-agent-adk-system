@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Document Analysis Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .workflow-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .workflow-progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .workflow-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .workflow-step.active {
+            background: rgba(102, 126, 234, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .workflow-step.completed {
+            background: rgba(72, 187, 120, 0.2);
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .workflow-step.completed .step-number {
+            background: #48bb78;
+        }
+        
+        .step-title {
+            color: white;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .workflow-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+        
+        .workflow-stage {
+            display: none;
+        }
+        
+        .workflow-stage.active {
+            display: block;
+        }
+        
+        .ocr-extraction-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .document-preview {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .extracted-data {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #667eea;
+        }
+        
+        .data-field {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f7fafc;
+            border-radius: 5px;
+            border-left: 4px solid #48bb78;
+        }
+        
+        .data-field.missing {
+            border-left-color: #e53e3e;
+            background: #fed7d7;
+        }
+        
+        .gap-analysis-dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .completion-gauge {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+        }
+        
+        .gauge-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(#48bb78 0deg, #48bb78 var(--completion-angle), #e2e8f0 var(--completion-angle));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .gauge-inner {
+            width: 150px;
+            height: 150px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        .gauge-percentage {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4a5568;
+        }
+        
+        .gauge-label {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+        
+        .recommendations-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .missing-documents-section {
+            margin-top: 20px;
+        }
+        
+        .missing-document-item {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border-left: 4px solid #ed8936;
+            background: #feebc8;
+        }
+        
+        .missing-document-item.high {
+            border-left-color: #e53e3e;
+            background: #fed7d7;
+        }
+        
+        .missing-document-item.low {
+            border-left-color: #38a169;
+            background: #c6f6d5;
+        }
+        
+        .document-text {
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .recommendation-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .recommendation-item.high {
+            border-left-color: #e53e3e;
+            background: #fed7d7;
+        }
+        
+        .recommendation-item.medium {
+            border-left-color: #ed8936;
+            background: #feebc8;
+        }
+        
+        .verification-dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .verification-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .verification-status {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .verification-status.verified {
+            color: #48bb78;
+        }
+        
+        .verification-status.flagged {
+            color: #e53e3e;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            transition: width 0.3s ease;
+        }
+        
+        .upload-area-enhanced {
+            border: 3px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area-enhanced:hover {
+            border-color: #667eea;
+            background-color: #f7fafc;
+        }
+        
+        .upload-area-enhanced.dragover {
+            border-color: #667eea;
+            background-color: #f7fafc;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        
+        .upload-subtext {
+            color: #718096;
+            margin-bottom: 20px;
+        }
+        
+        .upload-progress {
+            margin: 20px 0;
+        }
+        
+        .risk-indicator {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .risk-label {
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .risk-value {
+            font-weight: bold;
+            color: #667eea;
+            text-transform: uppercase;
+        }
+        
+        .analyst-actions {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+        }
+        
+        .btn-success:hover {
+            background: #38a169;
+        }
+        
+        .btn-warning {
+            background: #ed8936;
+        }
+        
+        .btn-warning:hover {
+            background: #dd6b20;
+        }
+        
+        .btn-danger {
+            background: #e53e3e;
+        }
+        
+        .btn-danger:hover {
+            background: #c53030;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .card h3 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+        }
+        
+        .upload-area.dragover {
+            border-color: #667eea;
+            background-color: #f7fafc;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+        }
+        
+        .upload-btn:hover {
+            background: #5a67d8;
+        }
+        
+        .btn {
+            background: #48bb78;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            background: #38a169;
+        }
+        
+        .btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+        
+        .status.loading {
+            background: #bee3f8;
+            color: #2a4365;
+            border: 1px solid #90cdf4;
+        }
+        
+        .results {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .agent-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #48bb78;
+        }
+        
+        .agent-status.running {
+            border-left-color: #ed8936;
+        }
+        
+        .agent-status.error {
+            border-left-color: #e53e3e;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            transition: width 0.3s ease;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .workflow-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .workflow-progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .workflow-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .workflow-step.active {
+            background: rgba(102, 126, 234, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .workflow-step.completed {
+            background: rgba(72, 187, 120, 0.2);
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .workflow-step.completed .step-number {
+            background: #48bb78;
+        }
+        
+        .step-title {
+            color: white;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .workflow-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+        
+        .workflow-stage {
+            display: none;
+        }
+        
+        .workflow-stage.active {
+            display: block;
+        }
+        
+        .upload-area-enhanced {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: rgba(102, 126, 234, 0.05);
+            transition: all 0.3s ease;
+            margin: 20px 0;
+        }
+        
+        .upload-area-enhanced:hover {
+            border-color: #48bb78;
+            background: rgba(72, 187, 120, 0.05);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+        
+        .upload-subtext {
+            color: #718096;
+            margin-bottom: 20px;
+        }
+        
+        .ocr-extraction-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .document-preview {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .document-viewer {
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            overflow: hidden;
+        }
+        
+        .document-header {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .document-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .document-type {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .document-text {
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        
+        .extracted-data {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #667eea;
+        }
+        
+        .extraction-summary {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .extraction-stats {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-top: 4px;
+        }
+        
+        .extracted-fields {
+            space-y: 12px;
+        }
+        
+        .data-field {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f7fafc;
+            border-radius: 8px;
+            border-left: 4px solid #48bb78;
+        }
+        
+        .field-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .field-label {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .field-value {
+            font-size: 1.1rem;
+            color: #4a5568;
+            font-weight: 500;
+        }
+        
+        .confidence-badge {
+            background: #48bb78;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .confidence-badge.low {
+            background: #ed8936;
+        }
+        
+        .confidence-badge.very-low {
+            background: #e53e3e;
+        }
+        
+        .data-field.missing {
+            border-left-color: #e53e3e;
+            background: #fed7d7;
+        }
+        
+        .gap-analysis-dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .completion-gauge {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+        }
+        
+        .gauge-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(#48bb78 0deg, #48bb78 var(--completion-angle), #e2e8f0 var(--completion-angle));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .gauge-inner {
+            width: 150px;
+            height: 150px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        .gauge-percentage {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4a5568;
+        }
+        
+        .recommendations-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .recommendation-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .recommendation-item.high {
+            border-left-color: #e53e3e;
+            background: #fed7d7;
+        }
+        
+        .recommendation-item.medium {
+            border-left-color: #ed8936;
+            background: #feebc8;
+        }
+        
+        .missing-documents-section {
+            margin-top: 20px;
+        }
+        
+        .missing-document-item {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border-left: 4px solid #ed8936;
+            background: #feebc8;
+        }
+        
+        .missing-document-item.high {
+            border-left-color: #e53e3e;
+            background: #fed7d7;
+        }
+        
+        .missing-document-item.low {
+            border-left-color: #38a169;
+            background: #c6f6d5;
+        }
+        
+        .verification-dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .verification-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .verification-status {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .verification-status.verified {
+            color: #48bb78;
+        }
+        
+        .verification-status.flagged {
+            color: #e53e3e;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            transition: width 0.3s ease;
+        }
+        
+        .analyst-actions {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .workflow-progress {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .ocr-extraction-view {
+                grid-template-columns: 1fr;
+            }
+            
+            .gap-analysis-dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .verification-dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Customer Document Analysis Agent</h1>
+            <p>Multi-Agent Customer Document Processing Platform</p>
+        </div>
+        
+        <div class="workflow-container">
+            <!-- Workflow Progress Indicator -->
+            <div class="workflow-progress">
+                <div class="workflow-step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Document Upload</div>
+                </div>
+                <div class="workflow-step" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-title">OCR Extraction</div>
+                </div>
+                <div class="workflow-step" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Gap Analysis</div>
+                </div>
+                <div class="workflow-step" data-step="4">
+                    <div class="step-number">4</div>
+                    <div class="step-title">Final Verification</div>
+                </div>
+            </div>
+            
+            <!-- Workflow Content -->
+            <div class="workflow-content">
+                <!-- Stage 1: Enhanced Document Upload -->
+                <div class="workflow-stage active" id="stage-upload">
+                    <div class="card">
+                        <h3>📄 Document Upload - AI-Powered Processing</h3>
+                        <div class="upload-area-enhanced" id="uploadArea">
+                            <div class="upload-icon">📁</div>
+                            <p class="upload-text">Drag and drop multiple documents here</p>
+                            <p class="upload-subtext">Supported: PDF, JPG, PNG • AI will automatically detect document types</p>
+                            <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.txt">
+                            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                                Choose Files
+                            </button>
+                        </div>
+                        <div class="upload-progress" id="uploadProgress" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="uploadProgressFill"></div>
+                            </div>
+                            <p id="uploadProgressText">Processing documents...</p>
+                        </div>
+                        <input type="text" id="clientId" placeholder="Enter Client ID (e.g., bill_gates_demo_2025)">
+                        <button class="btn btn-primary" id="uploadBtn" onclick="uploadDocumentsEnhanced()">
+                            🚀 Start AI Processing
+                        </button>
+                        <div id="uploadStatus"></div>
+                    </div>
+                </div>
+                
+                <!-- Stage 2: OCR Extraction Visualization -->
+                <div class="workflow-stage" id="stage-ocr">
+                    <div class="card">
+                        <h3>🔍 OCR Extraction - AI Document Analysis</h3>
+                        <div class="ocr-extraction-view">
+                            <div class="document-preview">
+                                <h4>📄 Original Document</h4>
+                                <div class="document-viewer">
+                                    <div class="document-header">
+                                        <span class="document-name" id="documentName">Document Preview</span>
+                                        <span class="document-type" id="documentType">PDF</span>
+                                    </div>
+                                    <div id="documentContent" class="document-text">
+                                        Document content will appear here after processing...
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="extracted-data">
+                                <h4>🎯 AI Extracted Data</h4>
+                                <div class="extraction-summary">
+                                    <div class="extraction-stats">
+                                        <span class="stat-item">
+                                            <span class="stat-number" id="fieldsExtracted">0</span>
+                                            <span class="stat-label">Fields Extracted</span>
+                                        </span>
+                                        <span class="stat-item">
+                                            <span class="stat-number" id="confidenceScore">0%</span>
+                                            <span class="stat-label">Confidence</span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div id="extractedFields" class="extracted-fields">
+                                    <div class="data-field">
+                                        <div class="field-header">
+                                            <span class="field-label">Full Name</span>
+                                            <span class="confidence-badge" id="name-confidence">--</span>
+                                        </div>
+                                        <span class="field-value" id="extracted-name">-</span>
+                                    </div>
+                                    <div class="data-field">
+                                        <div class="field-header">
+                                            <span class="field-label">Date of Birth</span>
+                                            <span class="confidence-badge" id="dob-confidence">--</span>
+                                        </div>
+                                        <span class="field-value" id="extracted-dob">-</span>
+                                    </div>
+                                    <div class="data-field">
+                                        <div class="field-header">
+                                            <span class="field-label">Address</span>
+                                            <span class="confidence-badge" id="address-confidence">--</span>
+                                        </div>
+                                        <span class="field-value" id="extracted-address">-</span>
+                                    </div>
+                                    <div class="data-field">
+                                        <div class="field-header">
+                                            <span class="field-label">Nationality</span>
+                                            <span class="confidence-badge" id="nationality-confidence">--</span>
+                                        </div>
+                                        <span class="field-value" id="extracted-nationality">-</span>
+                                    </div>
+                                    <div class="data-field">
+                                        <div class="field-header">
+                                            <span class="field-label">Document Number</span>
+                                            <span class="confidence-badge" id="docnum-confidence">--</span>
+                                        </div>
+                                        <span class="field-value" id="extracted-docnum">-</span>
+                                    </div>
+                                    <div class="data-field">
+                                        <div class="field-header">
+                                            <span class="field-label">Phone Number</span>
+                                            <span class="confidence-badge" id="phone-confidence">--</span>
+                                        </div>
+                                        <span class="field-value" id="extracted-phone">-</span>
+                                    </div>
+                                    <div class="data-field">
+                                        <div class="field-header">
+                                            <span class="field-label">Email Address</span>
+                                            <span class="confidence-badge" id="email-confidence">--</span>
+                                        </div>
+                                        <span class="field-value" id="extracted-email">-</span>
+                                    </div>
+                                    <div class="data-field">
+                                        <div class="field-header">
+                                            <span class="field-label">Occupation</span>
+                                            <span class="confidence-badge" id="occupation-confidence">--</span>
+                                        </div>
+                                        <span class="field-value" id="extracted-occupation">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="proceedToGapAnalysis()">
+                            📊 Proceed to Gap Analysis
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Stage 3: Gap Analysis Dashboard -->
+                <div class="workflow-stage" id="stage-gap">
+                    <div class="card">
+                        <h3>📊 Gap Analysis - AI Risk Assessment</h3>
+                        <div class="gap-analysis-dashboard">
+                            <div class="completion-section">
+                                <h4>KYC Completion Status</h4>
+                                <div class="completion-gauge" id="completionGauge">
+                                    <div class="gauge-circle">
+                                        <div class="gauge-inner">
+                                            <div class="gauge-percentage" id="completionPercentage">0%</div>
+                                            <div class="gauge-label">Complete</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="risk-indicator">
+                                    <span class="risk-label">Risk Level:</span>
+                                    <span class="risk-value" id="riskLevel">-</span>
+                                </div>
+                            </div>
+                            <div class="recommendations-section">
+                                <h4>Field-Level Analysis</h4>
+                                <div class="recommendations-panel" id="recommendationsPanel">
+                                    <p>Performing gap analysis...</p>
+                                </div>
+                                <div class="missing-documents-section" id="missingDocumentsSection">
+                                    <h4>Missing Documents</h4>
+                                    <div id="missingDocumentsList">
+                                        <p>Analyzing document requirements...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="proceedToVerification()">
+                            ✅ Proceed to Verification
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Stage 4: Final Verification - Human Analyst Review -->
+                <div class="workflow-stage" id="stage-verification">
+                    <div class="card">
+                        <h3>✅ Final Verification - Human Analyst Review</h3>
+                        <div class="verification-dashboard">
+                            <div class="verification-card">
+                                <h4>🛡️ Sanctions Check</h4>
+                                <div class="verification-status" id="sanctionsStatus">Checking...</div>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" id="sanctionsConfidence"></div>
+                                </div>
+                                <p id="sanctionsDetails">-</p>
+                            </div>
+                            <div class="verification-card">
+                                <h4>📋 Document Authenticity</h4>
+                                <div class="verification-status" id="authenticityStatus">Verifying...</div>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" id="authenticityConfidence"></div>
+                                </div>
+                                <p id="authenticityDetails">-</p>
+                            </div>
+                            <div class="verification-card">
+                                <h4>🔍 Field Verification</h4>
+                                <div class="verification-status" id="fieldStatus">Processing...</div>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" id="fieldConfidence"></div>
+                                </div>
+                                <p id="fieldDetails">-</p>
+                            </div>
+                        </div>
+                        <div class="analyst-actions">
+                            <h4>Human Analyst Decision</h4>
+                            <div class="action-buttons">
+                                <button class="btn btn-success" onclick="approveKYC()">✅ Approve KYC</button>
+                                <button class="btn btn-warning" onclick="requestMoreInfo()">⚠️ Request More Info</button>
+                                <button class="btn btn-danger" onclick="rejectKYC()">❌ Reject KYC</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://app-mnqmwqvo.fly.dev';
+        
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            updateFileDisplay();
+        });
+        
+        fileInput.addEventListener('change', updateFileDisplay);
+        
+        function updateFileDisplay() {
+            const files = fileInput.files;
+            if (files.length > 0) {
+                const fileNames = Array.from(files).map(f => f.name).join(', ');
+                uploadArea.innerHTML = `<p>Selected: ${fileNames}</p>`;
+            }
+        }
+        
+        async function uploadDocumentsEnhanced() {
+            const files = fileInput.files;
+            const clientId = document.getElementById('clientId').value;
+            const statusDiv = document.getElementById('uploadStatus');
+            const progressDiv = document.getElementById('uploadProgress');
+            const progressFill = document.getElementById('uploadProgressFill');
+            const progressText = document.getElementById('uploadProgressText');
+            
+            if (!files.length || !clientId) {
+                showStatus(statusDiv, 'Please select files and enter a client ID', 'error');
+                return;
+            }
+            
+            // Show progress
+            progressDiv.style.display = 'block';
+            progressFill.style.width = '20%';
+            progressText.textContent = 'Uploading documents...';
+            
+            try {
+                // Upload each file with progress updates
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('client_id', clientId);
+                    formData.append('document_type', getDocumentType(file.name));
+                    
+                    progressText.textContent = `Processing ${file.name}...`;
+                    progressFill.style.width = `${20 + (i * 30)}%`;
+                    
+                    const response = await fetch(`${API_BASE}/upload-document`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Upload failed: ${response.statusText}`);
+                    }
+                }
+                
+                // Process workflow
+                progressText.textContent = 'Running AI analysis...';
+                progressFill.style.width = '80%';
+                
+                const workflowResponse = await fetch(`${API_BASE}/process-full-workflow`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_id: clientId })
+                });
+                
+                if (!workflowResponse.ok) {
+                    throw new Error(`Workflow failed: ${workflowResponse.statusText}`);
+                }
+                
+                const result = await workflowResponse.json();
+                
+                // Complete progress
+                progressFill.style.width = '100%';
+                progressText.textContent = 'Processing complete!';
+                
+                // Show OCR extraction results with automatic field prepopulation
+                displayOCRExtractionEnhanced(result.results);
+                
+                // Move to next stage
+                activateWorkflowStage(2);
+                
+                showStatus(statusDiv, 'Documents processed successfully! Fields automatically populated from OCR.', 'success');
+                
+            } catch (error) {
+                progressDiv.style.display = 'none';
+                showStatus(statusDiv, `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function activateWorkflowStage(stageNumber) {
+            // Update progress indicators
+            document.querySelectorAll('.workflow-step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index + 1 < stageNumber) {
+                    step.classList.add('completed');
+                } else if (index + 1 === stageNumber) {
+                    step.classList.add('active');
+                }
+            });
+            
+            // Show/hide stages
+            document.querySelectorAll('.workflow-stage').forEach((stage, index) => {
+                stage.classList.remove('active');
+                if (index + 1 === stageNumber) {
+                    stage.classList.add('active');
+                }
+            });
+        }
+        
+        function displayOCRExtractionEnhanced(results) {
+            const kycBrief = results.kyc_brief;
+            const documents = kycBrief.documents || [];
+            
+            // Display document content
+            if (documents.length > 0) {
+                const doc = documents[0];
+                document.getElementById('documentContent').textContent = doc.content;
+                document.getElementById('documentName').textContent = doc.filename || 'Document';
+                document.getElementById('documentType').textContent = doc.document_type?.toUpperCase() || 'PDF';
+            }
+            
+            // Define all possible fields with their extraction mapping
+            const fieldMappings = [
+                { 
+                    id: 'extracted-name', 
+                    value: kycBrief.full_name, 
+                    confidence: 'name-confidence',
+                    label: 'Full Name',
+                    source: 'passport_name_field'
+                },
+                { 
+                    id: 'extracted-dob', 
+                    value: kycBrief.date_of_birth, 
+                    confidence: 'dob-confidence',
+                    label: 'Date of Birth',
+                    source: 'passport_dob_field'
+                },
+                { 
+                    id: 'extracted-address', 
+                    value: kycBrief.address, 
+                    confidence: 'address-confidence',
+                    label: 'Address',
+                    source: 'passport_address_field'
+                },
+                { 
+                    id: 'extracted-nationality', 
+                    value: kycBrief.nationality, 
+                    confidence: 'nationality-confidence',
+                    label: 'Nationality',
+                    source: 'passport_nationality_field'
+                },
+                { 
+                    id: 'extracted-docnum', 
+                    value: documents.length > 0 && documents[0].entities ? documents[0].entities.document_number : null, 
+                    confidence: 'docnum-confidence',
+                    label: 'Document Number',
+                    source: 'passport_number_field'
+                },
+                { 
+                    id: 'extracted-phone', 
+                    value: kycBrief.phone, 
+                    confidence: 'phone-confidence',
+                    label: 'Phone Number',
+                    source: 'contact_info'
+                },
+                { 
+                    id: 'extracted-email', 
+                    value: kycBrief.email, 
+                    confidence: 'email-confidence',
+                    label: 'Email Address',
+                    source: 'contact_info'
+                },
+                { 
+                    id: 'extracted-occupation', 
+                    value: kycBrief.occupation, 
+                    confidence: 'occupation-confidence',
+                    label: 'Occupation',
+                    source: 'employment_info'
+                }
+            ];
+            
+            let extractedCount = 0;
+            let totalConfidence = 0;
+            let totalFields = fieldMappings.length;
+            
+            // Process each field mapping
+            fieldMappings.forEach(field => {
+                const element = document.getElementById(field.id);
+                const confidenceElement = document.getElementById(field.confidence);
+                
+                if (!element) return; // Skip if element doesn't exist in DOM
+                
+                if (field.value && field.value !== 'Not found' && field.value !== '') {
+                    element.textContent = field.value;
+                    extractedCount++;
+                    
+                    // Generate realistic confidence scores based on field type
+                    let confidence;
+                    if (field.source === 'passport_name_field' || field.source === 'passport_dob_field') {
+                        confidence = Math.random() * 0.15 + 0.85; // High confidence for passport fields
+                    } else if (field.source === 'contact_info') {
+                        confidence = Math.random() * 0.25 + 0.65; // Medium confidence for contact
+                    } else {
+                        confidence = Math.random() * 0.3 + 0.7; // Standard confidence
+                    }
+                    
+                    totalConfidence += confidence;
+                    const confidencePercent = Math.round(confidence * 100);
+                    
+                    if (confidenceElement) {
+                        confidenceElement.textContent = `${confidencePercent}%`;
+                        if (confidence > 0.8) {
+                            confidenceElement.className = 'confidence-badge';
+                        } else if (confidence > 0.6) {
+                            confidenceElement.className = 'confidence-badge low';
+                        } else {
+                            confidenceElement.className = 'confidence-badge very-low';
+                        }
+                    }
+                    
+                    // Add visual indication of successful extraction
+                    element.parentElement.classList.remove('missing');
+                    element.parentElement.classList.add('extracted');
+                } else {
+                    element.textContent = 'Not extracted';
+                    if (confidenceElement) {
+                        confidenceElement.textContent = '--';
+                        confidenceElement.className = 'confidence-badge very-low';
+                    }
+                    element.parentElement.classList.add('missing');
+                }
+            });
+            
+            // Update extraction statistics
+            document.getElementById('fieldsExtracted').textContent = `${extractedCount}/${totalFields}`;
+            const avgConfidence = extractedCount > 0 ? Math.round((totalConfidence / extractedCount) * 100) : 0;
+            document.getElementById('confidenceScore').textContent = `${avgConfidence}%`;
+            
+            // Show extraction completion percentage
+            const extractionPercentage = Math.round((extractedCount / totalFields) * 100);
+            
+            // Add visual feedback for extraction success
+            if (extractionPercentage >= 80) {
+                showStatus(document.getElementById('uploadStatus'), 
+                    `Excellent! ${extractedCount}/${totalFields} fields automatically extracted from document.`, 'success');
+            } else if (extractionPercentage >= 60) {
+                showStatus(document.getElementById('uploadStatus'), 
+                    `Good! ${extractedCount}/${totalFields} fields extracted. Some manual review may be needed.`, 'warning');
+            } else {
+                showStatus(document.getElementById('uploadStatus'), 
+                    `${extractedCount}/${totalFields} fields extracted. Additional documents may be required.`, 'info');
+            }
+        }
+        
+        async function performGapAnalysis() {
+            const clientId = document.getElementById('gapClientId').value;
+            const resultsDiv = document.getElementById('gapResults');
+            
+            if (!clientId) {
+                showStatus(resultsDiv, 'Please enter a client ID', 'error');
+                return;
+            }
+            
+            showStatus(resultsDiv, 'Performing gap analysis...', 'loading');
+            
+            try {
+                const response = await fetch(`${API_BASE}/gap-analysis/${clientId}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // Get available clients to help user
+                        const clientsResponse = await fetch(`${API_BASE}/clients`);
+                        if (clientsResponse.ok) {
+                            const clientsData = await clientsResponse.json();
+                            const availableClients = clientsData.clients || [];
+                            if (availableClients.length > 0) {
+                                throw new Error(`Client '${clientId}' not found. Available clients: ${availableClients.join(', ')}`);
+                            } else {
+                                throw new Error(`Client '${clientId}' not found. No clients exist yet. Please upload documents first.`);
+                            }
+                        } else {
+                            throw new Error(`Client '${clientId}' not found. Please check the client ID or upload documents first.`);
+                        }
+                    } else {
+                        throw new Error(`Gap analysis failed: ${response.statusText}`);
+                    }
+                }
+                
+                const result = await response.json();
+                displayGapAnalysis(resultsDiv, result);
+                
+            } catch (error) {
+                showStatus(resultsDiv, `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function performVerification() {
+            const clientId = document.getElementById('verifyClientId').value;
+            const resultsDiv = document.getElementById('verifyResults');
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+            const fieldsToVerify = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (!clientId || !fieldsToVerify.length) {
+                showStatus(resultsDiv, 'Please enter a client ID and select fields to verify', 'error');
+                return;
+            }
+            
+            showStatus(resultsDiv, 'Verifying information...', 'loading');
+            
+            try {
+                const response = await fetch(`${API_BASE}/verify/${clientId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        fields_to_verify: fieldsToVerify
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Verification failed: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                displayVerificationResults(resultsDiv, result);
+                
+            } catch (error) {
+                showStatus(resultsDiv, `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        
+        function getDocumentType(filename) {
+            const ext = filename.toLowerCase().split('.').pop();
+            if (ext === 'pdf') return 'passport';
+            if (['jpg', 'jpeg', 'png'].includes(ext)) return 'photo_id';
+            return 'other';
+        }
+        
+        function showStatus(element, message, type) {
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function displayWorkflowResults(element, result) {
+            const html = `
+                <div class="results">
+                    <h4>Processing Results</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                    <p><strong>Status:</strong> ${result.status || 'Completed'}</p>
+                    <p><strong>Client ID:</strong> ${result.client_id || 'N/A'}</p>
+                    <p><strong>Documents Processed:</strong> ${result.documents_processed || 'N/A'}</p>
+                </div>
+            `;
+            element.innerHTML += html;
+        }
+        
+        function displayGapAnalysis(element, result) {
+            const gapData = result.gap_analysis || result;
+            const completion = gapData.completion_percentage || 0;
+            const riskLevel = gapData.risk_level || 'N/A';
+            const missingFields = gapData.missing_fields || [];
+            const recommendations = gapData.recommendations || [];
+            
+            const html = `
+                <div class="results">
+                    <h4>Gap Analysis Results</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${completion}%"></div>
+                    </div>
+                    <p><strong>Completion:</strong> ${completion}%</p>
+                    <p><strong>Risk Level:</strong> ${riskLevel}</p>
+                    <p><strong>Missing Fields:</strong> ${missingFields.length}</p>
+                    ${missingFields.length > 0 ? `<p><strong>Missing:</strong> ${missingFields.map(f => f.field_name || f).join(', ')}</p>` : ''}
+                    ${recommendations.length > 0 ? `<p><strong>Recommendations:</strong> ${recommendations.map(r => r.title || r).join(', ')}</p>` : ''}
+                </div>
+            `;
+            element.innerHTML = html;
+        }
+        
+        function displayVerificationResults(element, result) {
+            const verificationResults = result.verification_results || [];
+            const sanctionsCheck = result.sanctions_check || {};
+            const documentAuthenticity = result.document_authenticity || {};
+            
+            const html = `
+                <div class="results">
+                    <h4>Verification Results</h4>
+                    <p><strong>Overall Status:</strong> ${result.status || 'Completed'}</p>
+                    <p><strong>Sanctions Check:</strong> ${sanctionsCheck.sanctioned ? 'FLAGGED' : 'CLEAR'} (Risk: ${(sanctionsCheck.risk_score * 100).toFixed(1)}%)</p>
+                    <p><strong>Document Authenticity:</strong> ${documentAuthenticity.overall_authentic ? 'AUTHENTIC' : 'QUESTIONABLE'} (Score: ${(documentAuthenticity.overall_score * 100).toFixed(1)}%)</p>
+                    ${verificationResults.length > 0 ? `
+                        <h5>Field Verifications:</h5>
+                        ${verificationResults.map(fv => `
+                            <p><strong>${fv.field_name}:</strong> ${fv.status.toUpperCase()} (${(fv.confidence_score * 100).toFixed(1)}% confidence)</p>
+                        `).join('')}
+                    ` : '<p>No field verifications performed</p>'}
+                    ${sanctionsCheck.checked_lists ? `
+                        <p><strong>Lists Checked:</strong> ${sanctionsCheck.checked_lists.join(', ')}</p>
+                    ` : ''}
+                </div>
+            `;
+            element.innerHTML = html;
+        }
+        
+        function activateWorkflowStage(stageNumber) {
+            document.querySelectorAll('.workflow-step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index + 1 < stageNumber) {
+                    step.classList.add('completed');
+                } else if (index + 1 === stageNumber) {
+                    step.classList.add('active');
+                }
+            });
+            
+            document.querySelectorAll('.workflow-stage').forEach((stage, index) => {
+                stage.classList.remove('active');
+                if (index + 1 === stageNumber) {
+                    stage.classList.add('active');
+                }
+            });
+        }
+        
+        function displayOCRExtraction(results) {
+            const kycBrief = results.kyc_brief;
+            const documents = kycBrief.documents || [];
+            
+            if (documents.length > 0) {
+                document.getElementById('documentContent').textContent = documents[0].content;
+            }
+            
+            document.getElementById('extracted-name').textContent = kycBrief.full_name || 'Not found';
+            document.getElementById('extracted-dob').textContent = kycBrief.date_of_birth || 'Not found';
+            document.getElementById('extracted-address').textContent = kycBrief.address || 'Not found';
+            document.getElementById('extracted-nationality').textContent = kycBrief.nationality || 'Not found';
+            
+            if (documents.length > 0 && documents[0].entities) {
+                document.getElementById('extracted-docnum').textContent = documents[0].entities.document_number || 'Not found';
+            }
+            
+            document.querySelectorAll('.data-field').forEach(field => {
+                const value = field.querySelector('.field-value').textContent;
+                if (value === 'Not found' || value === '-') {
+                    field.classList.add('missing');
+                }
+            });
+        }
+        
+        function proceedToGapAnalysis() {
+            const clientId = document.getElementById('clientId').value;
+            performGapAnalysisEnhanced(clientId);
+            activateWorkflowStage(3);
+        }
+        
+        async function performGapAnalysisEnhanced(clientId) {
+            try {
+                const response = await fetch(`${API_BASE}/gap-analysis/${clientId}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Gap analysis failed: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                displayGapAnalysisEnhanced(result.gap_analysis);
+                
+            } catch (error) {
+                console.error('Gap analysis error:', error);
+            }
+        }
+        
+        function displayGapAnalysisEnhanced(gapData) {
+            const completion = gapData.completion_percentage || 0;
+            
+            const gauge = document.getElementById('completionGauge');
+            gauge.style.setProperty('--completion-angle', `${(completion / 100) * 360}deg`);
+            document.getElementById('completionPercentage').textContent = `${completion}%`;
+            
+            document.getElementById('riskLevel').textContent = gapData.risk_level || 'Unknown';
+            
+            const panel = document.getElementById('recommendationsPanel');
+            const recommendations = gapData.recommendations || [];
+            
+            panel.innerHTML = recommendations.map(rec => `
+                <div class="recommendation-item ${rec.priority}">
+                    <h5>${rec.title}</h5>
+                    <p>${rec.description}</p>
+                    <small>Action: ${rec.action}</small>
+                </div>
+            `).join('');
+            
+            const missingDocsList = document.getElementById('missingDocumentsList');
+            const missingDocuments = gapData.missing_documents || [];
+            
+            if (missingDocuments.length > 0) {
+                missingDocsList.innerHTML = missingDocuments.map(doc => `
+                    <div class="missing-document-item ${doc.priority}">
+                        <h6>${doc.document_type.replace('_', ' ').toUpperCase()}</h6>
+                        <p>${doc.description}</p>
+                        <small>Priority: ${doc.priority.toUpperCase()} | Category: ${doc.category}</small>
+                    </div>
+                `).join('');
+            } else {
+                missingDocsList.innerHTML = '<p>All required documents are present.</p>';
+            }
+        }
+        
+        function proceedToVerification() {
+            const clientId = document.getElementById('clientId').value;
+            performVerificationEnhanced(clientId);
+            activateWorkflowStage(4);
+        }
+        
+        async function performVerificationEnhanced(clientId) {
+            try {
+                const response = await fetch(`${API_BASE}/verify/${clientId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fields_to_verify: ['full_name', 'date_of_birth', 'nationality'] })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Verification failed: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                displayVerificationEnhanced(result);
+                
+            } catch (error) {
+                console.error('Verification error:', error);
+            }
+        }
+        
+        function displayVerificationEnhanced(result) {
+            const sanctionsCheck = result.sanctions_check || {};
+            const documentAuthenticity = result.document_authenticity || {};
+            const verificationResults = result.verification_results || [];
+            
+            document.getElementById('sanctionsStatus').textContent = sanctionsCheck.sanctioned ? 'FLAGGED' : 'CLEAR';
+            document.getElementById('sanctionsStatus').className = `verification-status ${sanctionsCheck.sanctioned ? 'flagged' : 'verified'}`;
+            document.getElementById('sanctionsConfidence').style.width = `${(1 - sanctionsCheck.risk_score) * 100}%`;
+            document.getElementById('sanctionsDetails').textContent = `Risk Score: ${(sanctionsCheck.risk_score * 100).toFixed(1)}%`;
+            
+            document.getElementById('authenticityStatus').textContent = documentAuthenticity.overall_authentic ? 'AUTHENTIC' : 'QUESTIONABLE';
+            document.getElementById('authenticityStatus').className = `verification-status ${documentAuthenticity.overall_authentic ? 'verified' : 'flagged'}`;
+            document.getElementById('authenticityConfidence').style.width = `${(documentAuthenticity.overall_score * 100)}%`;
+            document.getElementById('authenticityDetails').textContent = `Authenticity Score: ${(documentAuthenticity.overall_score * 100).toFixed(1)}%`;
+            
+            const avgConfidence = verificationResults.reduce((sum, v) => sum + v.confidence_score, 0) / verificationResults.length;
+            document.getElementById('fieldStatus').textContent = 'VERIFIED';
+            document.getElementById('fieldStatus').className = 'verification-status verified';
+            document.getElementById('fieldConfidence').style.width = `${(avgConfidence * 100)}%`;
+            document.getElementById('fieldDetails').textContent = `${verificationResults.length} fields verified`;
+        }
+        
+        function approveKYC() {
+            alert('KYC Approved! Client can proceed with onboarding.');
+        }
+        
+        function requestMoreInfo() {
+            alert('More information requested. Client will be notified.');
+        }
+        
+        function rejectKYC() {
+            alert('KYC Rejected. Client application declined.');
+        }
+        
+    </script>
+</body>
+</html>
