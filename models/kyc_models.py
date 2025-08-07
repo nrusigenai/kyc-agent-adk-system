@@ -57,10 +57,12 @@ class GapAnalysisItem(BaseModel):
 
 class GapAnalysisResult(BaseModel):
     client_id: str = Field(..., description="Client identifier")
-    missing_items: List[GapAnalysisItem] = Field(..., description="List of missing information")
+    missing_fields: List[Dict[str, Any]] = Field(..., description="List of missing fields")
+    missing_documents: List[Dict[str, Any]] = Field(..., description="List of missing documents")
     completion_percentage: float = Field(..., description="Percentage of KYC completion")
-    recommendations: List[str] = Field(..., description="Recommendations for next steps")
-    generated_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
+    recommendations: List[Dict[str, Any]] = Field(..., description="Recommendations for next steps")
+    risk_level: str = Field(..., description="Risk level assessment")
+    analysis_date: datetime.datetime = Field(default_factory=datetime.datetime.now)
 
 class VerificationResult(BaseModel):
     field_name: str = Field(..., description="Field being verified")

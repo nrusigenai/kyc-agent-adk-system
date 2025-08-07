@@ -165,9 +165,16 @@ class KYCVerificationAgent(AgentInterface):
         for doc in documents:
             authenticity_score = random.uniform(0.85, 0.98)
             
+            if isinstance(doc, dict):
+                doc_id = doc.get("id", "unknown")
+                filename = doc.get("filename", "unknown")
+            else:
+                doc_id = getattr(doc, "id", "unknown")
+                filename = getattr(doc, "filename", "unknown")
+            
             document_results.append({
-                "document_id": doc.get("id", "unknown"),
-                "filename": doc.get("filename", "unknown"),
+                "document_id": doc_id,
+                "filename": filename,
                 "authentic": authenticity_score > 0.8,
                 "authenticity_score": authenticity_score,
                 "security_features_detected": ["Watermark", "Security Thread", "Microprint"],
