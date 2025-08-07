@@ -184,6 +184,8 @@ async def analyze_gaps(client_id: str):
         else:
             raise HTTPException(status_code=400, detail=gap_result.get("message", "Gap analysis failed"))
             
+    except HTTPException:
+        raise  # Re-raise HTTPException with original status code
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in gap analysis: {str(e)}")
 
