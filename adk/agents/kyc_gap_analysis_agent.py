@@ -113,7 +113,14 @@ class KYCGapAnalysisAgent(AgentInterface):
                     "description": self._get_field_description(field_name)
                 })
         
-        provided_doc_types = [doc.get("document_type") for doc in kyc_brief.documents if doc.get("document_type")]
+        provided_doc_types = []
+        for doc in kyc_brief.documents:
+            if isinstance(doc, dict):
+                doc_type = doc.get("document_type")
+            else:
+                doc_type = getattr(doc, "document_type", None)
+            if doc_type:
+                provided_doc_types.append(doc_type)
         
         for doc_type, doc_config in self.required_documents.items():
             if doc_type not in provided_doc_types:
