@@ -1,7 +1,7 @@
-# KYC Agent System Setup Guide
+# Customer Document Analysis Agent Setup Guide
 
 ## Overview
-Complete multi-agent KYC (Know Your Customer) system with Google ADK compatibility featuring 4 specialized agents for document processing, parsing, gap analysis, and verification with a professional Streamlit UI.
+Complete multi-agent customer document analysis system with Google ADK compatibility featuring 4 specialized agents for document processing, parsing, gap analysis, and verification with a professional Streamlit UI.
 
 ## System Architecture
 

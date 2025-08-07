@@ -18,8 +18,8 @@ from adk.agents import KYCIngestionAgent, KYCParsingAgent, KYCGapAnalysisAgent, 
 from models.kyc_models import DocumentType, KYCBrief, AgentResponse, VerifyRequest
 
 app = FastAPI(
-    title="KYC Agent System API",
-    description="Multi-agent KYC processing system with specialized agents",
+    title="Customer Document Analysis Agent API",
+    description="Multi-agent customer document processing system with specialized agents",
     version="1.0.0"
 )
 
@@ -60,7 +60,7 @@ async def shutdown_event():
 @app.get("/")
 async def root():
     return {
-        "message": "KYC Agent System API",
+        "message": "Customer Document Analysis Agent API",
         "version": "1.0.0",
         "agents": ["KYCIngestionAgent", "KYCParsingAgent", "KYCGapAnalysisAgent", "KYCVerificationAgent"],
         "adk_enabled": True,

@@ -9,7 +9,7 @@ import pandas as pd
 from typing import Dict, Any, List
 
 st.set_page_config(
-    page_title="KYC Agent System",
+    page_title="Customer Document Analysis Agent",
     page_icon="🔐",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -120,8 +120,8 @@ def render_header():
     """Render the main header"""
     st.markdown("""
     <div class="main-header">
-        <h1>🔐 KYC Agent System</h1>
-        <p>Google ADK-Compatible Multi-Agent KYC Processing Platform</p>
+        <h1>🔐 Customer Document Analysis Agent</h1>
+        <p>Google ADK-Compatible Multi-Agent Customer Document Processing Platform</p>
     </div>
     """, unsafe_allow_html=True)
 

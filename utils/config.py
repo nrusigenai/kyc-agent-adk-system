@@ -2,7 +2,7 @@ import os
 from typing import Dict, Any
 
 class Config:
-    """Configuration management for KYC Agent System"""
+    """Configuration management for Customer Document Analysis Agent"""
     
     API_HOST = os.getenv("API_HOST", "0.0.0.0")
     API_PORT = int(os.getenv("API_PORT", 8000))
