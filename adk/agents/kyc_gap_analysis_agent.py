@@ -55,9 +55,13 @@ class KYCGapAnalysisAgent(AgentInterface):
             
             await self.update_status("idle")
             
+            gap_analysis_dict = gap_analysis.dict()
+            if "analysis_date" in gap_analysis_dict:
+                gap_analysis_dict["analysis_date"] = gap_analysis_dict["analysis_date"].isoformat()
+            
             return {
                 "success": True,
-                "gap_analysis": gap_analysis.dict(),
+                "gap_analysis": gap_analysis_dict,
                 "message": f"Gap analysis completed. Found {len(gap_analysis.missing_fields)} missing fields and {len(gap_analysis.missing_documents)} missing documents",
                 "processing_time": 1.2
             }

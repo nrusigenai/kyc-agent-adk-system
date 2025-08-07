@@ -1,0 +1,25 @@
+PASSPORT
+
+UNITED STATES OF AMERICA
+
+Name: John Michael Smith
+Date of Birth: March 15, 1985
+Place of Birth: New York, NY, USA
+Nationality: United States
+Passport Number: 123456789
+Issue Date: January 10, 2020
+Expiration Date: January 10, 2030
+
+Address: 123 Main Street, Apartment 4B, New York, NY 10001
+Phone: +1-555-123-4567
+Email: john.smith@email.com
+Occupation: Software Engineer
+Source of Wealth: Employment Income
+
+Emergency Contact:
+Name: Sarah Smith
+Relationship: Spouse
+Phone: +1-555-123-4567
+
+This is a sample passport document for KYC demonstration purposes.
+Contains identity information including full name, date of birth, address, and nationality.

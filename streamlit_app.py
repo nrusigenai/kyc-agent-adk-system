@@ -228,13 +228,30 @@ def document_upload_page():
                         time.sleep(1)
                     
                     ui = KYCAgentUI()
-                    files_data = {}
-                    form_data = {"document_types": document_types}
                     
+                    upload_success = True
                     for i, file in enumerate(uploaded_files):
-                        files_data[f"files"] = (file.name, file.getvalue(), file.type)
+                        doc_type = document_types[i] if i < len(document_types) else "other"
+                        
+                        files_data = {"file": (file.name, file.getvalue(), file.type)}
+                        form_data = {
+                            "document_type": doc_type,
+                            "client_id": client_id
+                        }
+                        
+                        upload_result = ui.call_api("/upload-document", "POST", form_data, files_data)
+                        
+                        if "error" in upload_result:
+                            st.error(f"❌ Failed to upload {file.name}: {upload_result['error']}")
+                            upload_success = False
+                            break
+                        else:
+                            st.success(f"✅ Uploaded {file.name} successfully")
                     
-                    result = ui.call_api(f"/workflow/{client_id}", "POST", form_data, files_data)
+                    if upload_success:
+                        result = ui.call_api(f"/workflow/{client_id}", "POST")
+                    else:
+                        result = {"error": "Document upload failed"}
                     
                     if "error" not in result:
                         st.success("✅ Documents processed successfully!")
