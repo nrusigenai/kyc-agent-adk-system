@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: AgentConfiguration
+metadata:
+  name: kyc-agent-system
+  version: "1.0.0"
+  description: "Multi-agent KYC processing system with Google ADK compatibility"
+
+agents:
+  - name: kyc-ingestion-agent
+    type: KYCIngestionAgent
+    module: adk.agents.kyc_ingestion_agent
+    class: KYCIngestionAgent
+    config:
+      max_file_size: 10485760  # 10MB
+      supported_formats: ["pdf", "jpg", "png", "txt"]
+      processing_timeout: 30
+    
+  - name: kyc-parsing-agent
+    type: KYCParsingAgent
+    module: adk.agents.kyc_parsing_agent
+    class: KYCParsingAgent
+    config:
+      extraction_confidence_threshold: 0.7
+      processing_timeout: 45
+    
+  - name: kyc-gap-analysis-agent
+    type: KYCGapAnalysisAgent
+    module: adk.agents.kyc_gap_analysis_agent
+    class: KYCGapAnalysisAgent
+    config:
+      required_fields_priority: "high"
+      analysis_timeout: 30
+    
+  - name: kyc-verification-agent
+    type: KYCVerificationAgent
+    module: adk.agents.kyc_verification_agent
+    class: KYCVerificationAgent
+    config:
+      verification_timeout: 60
+      confidence_threshold: 0.8
+      sanctions_check_enabled: true
+
+message_bus:
+  type: AsyncMessageBus
+  config:
+    max_queue_size: 1000
+    message_timeout: 30
+    retry_attempts: 3
+
+agent_manager:
+  type: AgentManager
+  config:
+    max_concurrent_agents: 10
+    health_check_interval: 30
+    auto_restart: true
