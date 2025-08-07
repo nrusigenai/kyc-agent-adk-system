@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from adk.core.agent_manager import AgentManager
 from adk.agents import KYCIngestionAgent, KYCParsingAgent, KYCGapAnalysisAgent, KYCVerificationAgent
-from models.kyc_models import DocumentType, KYCBrief, AgentResponse
+from models.kyc_models import DocumentType, KYCBrief, AgentResponse, VerifyRequest
 
 app = FastAPI(
     title="KYC Agent System API",
@@ -188,9 +188,10 @@ async def analyze_gaps(client_id: str):
         raise HTTPException(status_code=500, detail=f"Error in gap analysis: {str(e)}")
 
 @app.post("/verify/{client_id}")
-async def verify_alias(client_id: str, fields_to_verify: Optional[List[str]] = None):
+async def verify_alias(client_id: str, request: Optional[VerifyRequest] = None, fields_to_verify: Optional[List[str]] = None):
     """Verify KYC information (alias endpoint)"""
-    return await verify_information(client_id, fields_to_verify)
+    fields = request.fields_to_verify if request and request.fields_to_verify else fields_to_verify
+    return await verify_information(client_id, fields)
 
 @app.post("/verify-information/{client_id}")
 async def verify_information(
@@ -218,6 +219,8 @@ async def verify_information(
         else:
             raise HTTPException(status_code=400, detail=verification_result.get("message", "Verification failed"))
             
+    except HTTPException:
+        raise  # Re-raise HTTPException with original status code
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in verification: {str(e)}")
 

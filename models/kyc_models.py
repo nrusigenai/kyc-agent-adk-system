@@ -72,6 +72,9 @@ class VerificationResult(BaseModel):
     sources: List[str] = Field(default_factory=list, description="Verification sources")
     verified_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
 
+class VerifyRequest(BaseModel):
+    fields_to_verify: Optional[List[str]] = Field(default=None, description="List of fields to verify")
+
 class AgentResponse(BaseModel):
     agent_name: str = Field(..., description="Name of the agent")
     status: str = Field(..., description="Response status")
