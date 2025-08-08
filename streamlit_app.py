@@ -83,7 +83,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = "https://app-thpikwqx.fly.dev"
 
 class KYCAgentUI:
     def __init__(self):
